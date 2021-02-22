@@ -14,12 +14,10 @@ class StrengthIndex(Enum):
 
 class PokerSimulator:
 
-    def __init__(self, player_cards, board_state):
-        self.player_cards = player_cards
+    def __init__(self, player_hands, board_state):
+        self.player_hands = player_hands
         self.board_state = board_state if board_state else []
         self.rank_values = self.create_rank_dictionary()
-        self.deck = self.generate_new_deck()
-        self.remove_player_cards_from_deck()
         
     def generate_new_deck(self):
         deck = []
@@ -36,33 +34,47 @@ class PokerSimulator:
             value += 1
         return rank_values
     
-    def shuffle_deck(self):
-        random.shuffle(self.deck)
-    
-    def remove_player_cards_from_deck(self):
-        if self.player_cards:
-            for hand in self.player_cards:
+    def remove_player_cards(self, deck):
+        """
+        Removes player cards from input deck
+        """
+        if self.player_hands:
+            for hand in self.player_hands:
                 for card in hand:
-                    if card in self.deck:
-                        self.deck.remove(card)
+                    if card in deck:
+                        deck.remove(card)
                     else:
                         raise Exception("Invalid Player Card")
-    
-    def deal_card(self):
-        return self.deck.pop()
 
-    def simulate_full_board(self):
-        self.shuffle_deck()
-        while len(self.board_state) < 5:
-            next_card = self.deal_card()  
-            self.board_state.append(next_card)
+    def deal_full_board(self, deck):
+        simulated_board_state = self.board_state[:]
+        while len(simulated_board_state) < 5:
+            next_card = deck.pop()  
+            simulated_board_state.append(next_card)
+        return simulated_board_state
     
-    def determine_winner(self):
-        player_strengths = []
-        for player_hand in self.player_cards:
-            board = self.board_state + player_hand
-            player_strengths.append(get_hand_strength(self, board))
-    
+    def determine_winner(self, simulated_board):
+        player_hand_strengths = []
+        for player_hand in self.player_hands:
+            board = simulated_board + player_hand
+            player_hand_strengths.append(self.get_hand_strength(board))
+
+        strongest_type = max([strength[0].value for strength in player_hand_strengths])
+        strongest_hands = [strength for strength in player_hand_strengths \
+            if strength[0].value == strongest_type]
+
+        # If multiple players with straights, flushes, etc.
+        strength_values = []
+        for i in range(len(strongest_hands)):
+            strength_sum = 0
+            num_strength_values = len(strongest_hands[0]) - 1
+            for j in range(1, num_strength_values+1):
+                strength_sum += 10**(num_strength_values-j)*strongest_hands[i][j]
+            strength_values.append(strength_sum)
+        best_hand = strongest_hands[strength_values.index(max(strength_values))]
+
+        return self.player_hands[player_hand_strengths.index(best_hand)]
+
     def get_hand_strength(self, board):
         """
         Returns in a tuple of (StrengthIndex, strength_index_value) hand strength
@@ -211,4 +223,17 @@ class PokerSimulator:
             if len(pairs) == 2:
                 return self.rank_values[pairs[0]], self.rank_values[pairs[1]]
         return None
+    
+    def simulate_winner(self):
+        deck = self.generate_new_deck()
+        self.remove_player_cards(deck)
+        random.shuffle(deck)
+        simulated_board = self.deal_full_board(deck)
+        return tuple(self.determine_winner(simulated_board))
+
+    def get_winner_odds(self, repeats):
+        player_wins = {tuple(hand):0 for hand in self.player_hands}
+        for i in range(repeats):
+            player_wins[self.simulate_winner()] += 1
+        print(player_wins)
         
