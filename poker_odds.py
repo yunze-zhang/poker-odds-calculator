@@ -3,14 +3,14 @@ from enum import Enum
 
 class StrengthIndex(Enum):
     HIGH_CARD = 0
-    ONE_PAIR = 1
-    TWO_PAIR = 2
-    THREE_OF_A_KIND = 3
-    STRAIGHT = 4
-    FLUSH = 5
-    FULL_HOUSE = 6
-    FOUR_OF_A_KIND = 7
-    STRAIGHT_FLUSH = 8
+    ONE_PAIR = 10
+    TWO_PAIR = 20
+    THREE_OF_A_KIND = 30
+    STRAIGHT = 40
+    FLUSH = 50
+    FULL_HOUSE = 60
+    FOUR_OF_A_KIND = 70
+    STRAIGHT_FLUSH = 80
 
 class PokerSimulator:
 
@@ -54,65 +54,64 @@ class PokerSimulator:
         return simulated_board_state
     
     def determine_winner(self, simulated_board):
-        player_hand_strengths = []
+        """
+        Returns string representation of list of winning hands
+            - Single hand in list if only one winner
+            - Multiple hands in list if multiple winners
+        """
+        hand_strengths = {}
         for player_hand in self.player_hands:
             board = simulated_board + player_hand
-            player_hand_strengths.append(self.get_hand_strength(board))
-
-        strongest_type = max([strength[0].value for strength in player_hand_strengths])
-        strongest_hands = [strength for strength in player_hand_strengths \
-            if strength[0].value == strongest_type]
-
-        # If multiple players with straights, flushes, etc.
-        strength_values = []
-        for i in range(len(strongest_hands)):
-            strength_sum = 0
-            num_strength_values = len(strongest_hands[0]) - 1
-            for j in range(1, num_strength_values+1):
-                strength_sum += 10**(num_strength_values-j)*strongest_hands[i][j]
-            strength_values.append(strength_sum)
-        best_hand = strongest_hands[strength_values.index(max(strength_values))]
-
-        return self.player_hands[player_hand_strengths.index(best_hand)]
+            hand_strength = self.get_hand_strength(board)
+            numerical_hand_strength = 0
+            for i in range(len(hand_strength)):
+                numerical_hand_strength += (1000/10**i)*hand_strength[i] 
+            hand_strengths[tuple(player_hand)] = numerical_hand_strength
+        best_hands = [hand for hand in hand_strengths \
+                      if hand_strengths[hand] == max(hand_strengths.values())]
+        if len(best_hands) > 1:
+            print(simulated_board)
+        return str(best_hands)
 
     def get_hand_strength(self, board):
         """
         Returns in a tuple of (StrengthIndex, strength_index_value) hand strength
+        Max length of tuple is 4 for Two Pair
         """
         rank_counts = self.get_rank_counts(board)
         suit_counts = self.get_suit_counts(board)
 
         sf_rank = self.get_largest_straight_flush(board, suit_counts)
         if sf_rank:
-            return StrengthIndex.STRAIGHT_FLUSH, sf_rank
+            return StrengthIndex.STRAIGHT_FLUSH.value, sf_rank
         quads_rank = self.get_largest_duplicate_rank(rank_counts, 4)
         if quads_rank:
             kicker = self.get_largest_kicker_sum(board, [quads_rank], 1)
-            return StrengthIndex.FOUR_OF_A_KIND, quads_rank, kicker
+            return StrengthIndex.FOUR_OF_A_KIND.value, quads_rank, kicker
         fh_ranks = self.get_largest_full_house(rank_counts)
         if fh_ranks:
-            return StrengthIndex.FULL_HOUSE, fh_ranks[0], fh_ranks[1]
+            return StrengthIndex.FULL_HOUSE.value, fh_ranks[0], fh_ranks[1]
         flush_suit = self.get_flush_suit(suit_counts)
         if flush_suit:
-            return StrengthIndex.FLUSH, self.get_flush_rank_sum(board, flush_suit)
+            return StrengthIndex.FLUSH.value, self.get_flush_rank_sum(board, flush_suit)
         straight_rank = self.get_largest_straight(board)
         if straight_rank:
-            return StrengthIndex.STRAIGHT, straight_rank
+            return StrengthIndex.STRAIGHT.value, straight_rank
         trips_rank = self.get_largest_duplicate_rank(rank_counts, 3)
         if trips_rank:
             kicker_sum = self.get_largest_kicker_sum(board, [trips_rank], 2)
-            return StrengthIndex.THREE_OF_A_KIND, trips_rank, kicker_sum
+            return StrengthIndex.THREE_OF_A_KIND.value, trips_rank, kicker_sum
         tp_ranks = self.get_largest_two_pair(rank_counts)
         if tp_ranks:
             kicker = self.get_largest_kicker_sum(board, [tp_ranks[0], tp_ranks[1]], 1)
-            return StrengthIndex.TWO_PAIR, tp_ranks[0], tp_ranks[1], kicker
+            return StrengthIndex.TWO_PAIR.value, tp_ranks[0], tp_ranks[1], kicker
         pair_rank = self.get_largest_duplicate_rank(rank_counts, 2)
         if pair_rank:
             kicker_sum = self.get_largest_kicker_sum(board, [pair_rank], 3)
-            return StrengthIndex.ONE_PAIR, pair_rank, kicker_sum
+            return StrengthIndex.ONE_PAIR.value, pair_rank, kicker_sum
         else:
             kicker_sum = self.get_largest_kicker_sum(board, [], 5)
-            return StrengthIndex.HIGH_CARD, kicker_sum
+            return StrengthIndex.HIGH_CARD.value, kicker_sum
     
     def get_rank_counts(self, board):
         board_ranks = [card[0] for card in board]
@@ -229,11 +228,15 @@ class PokerSimulator:
         self.remove_player_cards(deck)
         random.shuffle(deck)
         simulated_board = self.deal_full_board(deck)
-        return tuple(self.determine_winner(simulated_board))
+        return self.determine_winner(simulated_board)
 
     def get_winner_odds(self, repeats):
-        player_wins = {tuple(hand):0 for hand in self.player_hands}
+        player_wins = {}
         for i in range(repeats):
-            player_wins[self.simulate_winner()] += 1
-        print(player_wins)
+            winner = self.simulate_winner()
+            if winner in player_wins:
+                player_wins[winner] += 1
+            else:
+                player_wins[winner] = 1
+        return player_wins
         
