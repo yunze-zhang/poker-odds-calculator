@@ -89,13 +89,13 @@ class TestPokerSimulator(unittest.TestCase):
         simulator = PokerSimulator([['Ah','2h']], ['3d', '4h', '5s', 'Th', 'Jh'])
         board = simulator.board_state + simulator.player_hands[0]
         hand_strength = simulator.get_hand_strength(board)
-        self.assertEqual(hand_strength, (StrengthIndex.FLUSH.value, 41))
+        self.assertEqual(hand_strength, (StrengthIndex.FLUSH.value, 15.4))
     
     def test_flush_multiple(self):
         simulator = PokerSimulator([['Ah','2h']], ['Qh', '4h', '5s', 'Th', 'Jh'])
         board = simulator.board_state + simulator.player_hands[0]
         hand_strength = simulator.get_hand_strength(board)
-        self.assertEqual(hand_strength, (StrengthIndex.FLUSH.value, 51))
+        self.assertEqual(hand_strength, (StrengthIndex.FLUSH.value, 17.5))
     
     def test_full_house(self):
         simulator = PokerSimulator([['Ad','2h']], ['Ah', '2d', 'As', 'Th', 'Jh'])
@@ -137,13 +137,17 @@ class TestPokerSimulator(unittest.TestCase):
         simulator = PokerSimulator([['8d','9d'], ['Ah', 'Kd']], None)
         winner = simulator.simulate_winner()
     
-    # def test_get_winner_odds_pre_flop(self):
-    #     simulator = PokerSimulator([['8d','9d'], ['Ah', 'Kd']], None)
-    #     print(simulator.get_winner_odds(10000))
+    def test_get_winner_odds_pre_flop(self):
+        simulator = PokerSimulator([['8d','9d'], ['Ah', 'Kd']], None)
+        print(simulator.get_winner_odds(10000))
     
     def test_get_winner_odds_post_flop(self):
         simulator = PokerSimulator([['8d','9d'], ['Ah', 'Kd']], ['6d', '7d', 'As'])
-        print(simulator.get_winner_odds(1000))
+        print(simulator.get_winner_odds(10000))
+
+    def test_get_winner_odds_full_board(self):
+        simulator = PokerSimulator([['8d','9d'], ['Ah', 'Kd']], ['6d', '7d', 'As', 'Jd', '4d'])
+        print(simulator.get_winner_odds(10000))
 
 if __name__ == '__main__':
     unittest.main()

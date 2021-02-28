@@ -46,6 +46,19 @@ class PokerSimulator:
                     else:
                         raise Exception("Invalid Player Card")
 
+    def remove_board_cards(self, deck):
+        """
+        Removes input cards for board from deck
+        """
+        if len(self.board_state) > 0:
+            for card in self.board_state:
+                deck.remove(card)
+        
+    
+    def remove_dealt_cards(self, deck):
+        self.remove_player_cards(deck)
+        self.remove_board_cards(deck)
+
     def deal_full_board(self, deck):
         simulated_board_state = self.board_state[:]
         while len(simulated_board_state) < 5:
@@ -69,8 +82,6 @@ class PokerSimulator:
             hand_strengths[tuple(player_hand)] = numerical_hand_strength
         best_hands = [hand for hand in hand_strengths \
                       if hand_strengths[hand] == max(hand_strengths.values())]
-        if len(best_hands) > 1:
-            print(simulated_board)
         return str(best_hands)
 
     def get_hand_strength(self, board):
@@ -142,12 +153,15 @@ class PokerSimulator:
     def get_flush_rank_sum(self, board, suit):
         """
         Returns the rank sum of a suit that was determined to be a flush
+            - Ranks are weighted by index in top 5 to account for cases such as
+              (10, 7) and (8, 9) returning the same rank sum value where the 10
+              flush is higher
         """
-        flush_ranks = sorted([card[0] for card in board if card[1] == suit])
+        flush_ranks = sorted([self.rank_values[card[0]] for card in board if card[1] == suit])
         rank_sum = 0
         for i in range(1, 6):
-            rank_sum += self.rank_values[flush_ranks[-i]]
-        return rank_sum
+            rank_sum += (6-i)*flush_ranks[-i]
+        return rank_sum/10
     
     def get_largest_straight(self, board):
         """
@@ -225,7 +239,7 @@ class PokerSimulator:
     
     def simulate_winner(self):
         deck = self.generate_new_deck()
-        self.remove_player_cards(deck)
+        self.remove_dealt_cards(deck)
         random.shuffle(deck)
         simulated_board = self.deal_full_board(deck)
         return self.determine_winner(simulated_board)
